@@ -29,7 +29,7 @@ Language + Lib | 1 sheet | 9 sheets
 Nodejs with exceljs | 5s | 41s
 Go with excelize | 5s | 30s
 Python3 with xlsxwriter | 26s | 236s
-Rust with rust_xlsxwriter | 48s | 296s
+Rust with rust_xlsxwriter | 5s | 40s
 
 ## How to Run
 Clone the repo. 
@@ -68,7 +68,7 @@ N_SHEETS=9 python main.py
 ```
 cd rust_xlsxwriter
 # single-sheet
-cargo run
+cargo run --release
 # multi-sheet
-N_SHEETS=9 cargo run
+N_SHEETS=9 cargo run --release
 ```
