@@ -61,33 +61,55 @@ fn write_sheet(worksheet: &mut Worksheet, recs: &[Record], decimal_format: &Form
 
 
 fn to_excel(recs: Vec<Record>) {
-    let n_sheets = env::var("N_SHEETS")
-        .ok()
-        .and_then(|v| v.parse::<u8>().ok())
-        .unwrap_or(1)
-        .max(1)
-        .min(9);
-
+    // Create a new Excel file object.
     let mut workbook = Workbook::new();
+    
+    // Get the number of sheets from the environment variable
+    let n_sheets = match env::var("N_SHEETS") {
+        Ok(val) => {
+            let n: u8 = val.parse().unwrap_or(1);
+            if n > 0 && n < 9 {
+                n
+            } else {
+                println!("Invalid N_SHEETS value. Using default of 1.");
+                1
+            }
+        },
+        Err(_) => 1,
+    };
+
+    // Create some formats to use in the worksheet.
     let decimal_format = Format::new().set_num_format("0.000");
     let date_format = Format::new().set_num_format("yyyy-mm-dd");
 
-    let workbook = Mutex::new(workbook);
-    let recs = Arc::new(recs);
-
-    (1..=n_sheets).into_par_iter().for_each(|sheet_num| {
-        let mut worksheet = Worksheet::new();
+    for sheet_num in 1..=n_sheets {
+        // Add a worksheet to the workbook.
+        let worksheet = workbook.add_worksheet_with_low_memory();
+        // Set the worksheet name
         worksheet.set_name(&format!("Sheet{}", sheet_num)).unwrap();
+        // Set the column width for clarity.
+        worksheet.set_column_width(0, 22);
 
-        write_sheet(&mut worksheet, &recs, &decimal_format, &date_format);
+        for (i, rec) in recs.iter().enumerate() {
+            let r = u32::try_from(i).unwrap();
 
-        let mut workbook = workbook.lock().unwrap();
-        workbook.push_worksheet(worksheet);
-    });
+            worksheet.write(r, 0, &rec.id);
+            worksheet.write(r, 1, &format!("{}", &rec.my_string_1));
+            worksheet.write(r, 2, rec.my_numeric_string2.as_deref().unwrap_or(""));
+            worksheet.write(r, 3, rec.my_string_2.as_deref().unwrap_or(""));
 
-    // Save the workbook
-    let mut workbook = workbook.into_inner().unwrap();
-    workbook.save("demo.xlsx").unwrap();
+            worksheet.write_with_format(r, 4, rec.amount, &decimal_format);
+
+            let my_date_2 = ExcelDateTime::parse_from_str(&rec.my_date_2).unwrap();
+            worksheet.write_with_format(r, 5, &my_date_2, &date_format);    
+            
+            let my_date_1 = ExcelDateTime::parse_from_str(&rec.my_date_1).unwrap();
+            worksheet.write_with_format(r, 6, &my_date_1, &date_format);    
+        }
+    }
+    
+    // Save the file to disk.
+    workbook.save("demo.xlsx");
 }
 
 fn main(){
